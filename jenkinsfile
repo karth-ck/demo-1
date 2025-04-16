@@ -3,22 +3,12 @@ pipeline {
 
     environment {
         TF_VAR_aws_region = 'ap-south-1'
-        AWS_ACCESS_KEY_ID = credentials('aws-access-key') // Ensure credentials ID is correct
-        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key') // Ensure credentials ID is correct
     }
 
     stages {
         stage('Checkout') {
             steps {
-                script {
-                    // Ensure proper Git configuration is available
-                    def gitStatus = sh(script: 'git --version', returnStatus: true)
-                    if (gitStatus != 0) {
-                        error "Git is not installed or not configured correctly"
-                    }
-
-                    checkout scm
-                }
+                git branch: 'main', url: 'https://github.com/karth-ck/demo-1.git'
             }
         }
 
@@ -26,37 +16,31 @@ pipeline {
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-creds'  // <- your Jenkins credentials ID
+                    credentialsId: 'aws-creds' // ✅ This is the *only* credentials ID you need
                 ]]) {
-                    script {
-                        def initStatus = sh(script: 'terraform init', returnStatus: true)
-                        if (initStatus != 0) {
-                            error "Terraform init failed with status ${initStatus}"
-                        }
-                    }
+                    sh 'terraform init'
                 }
             }
         }
 
         stage('Terraform Plan') {
             steps {
-                script {
-                    def planOutput = sh(script: 'terraform plan -no-color', returnStdout: true).trim()
-                    echo "Terraform Plan Output: ${planOutput}"
-                    if (planOutput.contains("Error")) {
-                        error "Terraform plan encountered an error"
-                    }
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    sh 'terraform plan -no-color'
                 }
             }
         }
 
         stage('Terraform Apply') {
             steps {
-                script {
-                    def applyStatus = sh(script: 'terraform apply -auto-approve', returnStatus: true)
-                    if (applyStatus != 0) {
-                        error "Terraform apply failed with status ${applyStatus}"
-                    }
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    sh 'terraform apply -auto-approve'
                 }
             }
         }
@@ -65,17 +49,11 @@ pipeline {
             steps {
                 script {
                     def ip = sh(script: "terraform output -raw instance_ip", returnStdout: true).trim()
-                    echo "EC2 Instance IP: ${ip}"
 
-                    def scpStatus = sh(script: "scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa index.html ec2-user@${ip}:/tmp/index.html", returnStatus: true)
-                    if (scpStatus != 0) {
-                        error "Failed to upload HTML file"
-                    }
-
-                    def sshStatus = sh(script: "ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ec2-user@${ip} 'sudo mv /tmp/index.html /var/www/html/index.html'", returnStatus: true)
-                    if (sshStatus != 0) {
-                        error "Failed to move HTML file to the web server"
-                    }
+                    sh """
+                        scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa index.html ec2-user@${ip}:/tmp/index.html
+                        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ec2-user@${ip} 'sudo mv /tmp/index.html /var/www/html/index.html'
+                    """
                 }
             }
         }
