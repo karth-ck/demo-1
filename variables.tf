@@ -1,24 +1,11 @@
 variable "aws_region" {
-  description = "AWS region to deploy into"
-  type        = string
+  default = "ap-south-1"
 }
 
 variable "instance_type" {
-  description = "EC2 instance type"
-  type        = string
+  default = "t2.micro"
 }
 
 variable "ami_id" {
-  description = "AMI ID to use for the EC2 instance"
-  type        = string
-}
-
-variable "public_key_path" {
-  description = "Path to your public SSH key"
-  type        = string
-}
-
-variable "private_key_path" {
-  description = "Path to your private SSH key"
-  type        = string
+  default = "ami-0c55b159cbfafe1f0"  # Amazon Linux 2 AMI (update if needed)
 }

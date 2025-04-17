@@ -16,7 +16,7 @@ pipeline {
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-creds' // ✅ This is the *only* credentials ID you need
+                    credentialsId: 'aws-creds'
                 ]]) {
                     sh 'terraform init'
                 }
@@ -29,7 +29,7 @@ pipeline {
                     $class: 'AmazonWebServicesCredentialsBinding',
                     credentialsId: 'aws-creds'
                 ]]) {
-                    sh 'terraform plan -no-color'
+                    sh 'terraform plan -input=false -no-color'
                 }
             }
         }
@@ -40,20 +40,16 @@ pipeline {
                     $class: 'AmazonWebServicesCredentialsBinding',
                     credentialsId: 'aws-creds'
                 ]]) {
-                    sh 'terraform apply -auto-approve'
+                    sh 'terraform apply -auto-approve -input=false'
                 }
             }
         }
 
-        stage('Upload HTML') {
+        stage('Show Instance IP') {
             steps {
                 script {
                     def ip = sh(script: "terraform output -raw instance_ip", returnStdout: true).trim()
-
-                    sh """
-                        scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa index.html ec2-user@${ip}:/tmp/index.html
-                        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ec2-user@${ip} 'sudo mv /tmp/index.html /var/www/html/index.html'
-                    """
+                    echo "✅ Your site is live at: http://${ip}"
                 }
             }
         }
