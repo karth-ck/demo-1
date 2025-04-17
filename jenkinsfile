@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        TF_VAR_aws_region = 'ap-south-1'
+        TF_VAR_aws_region = 'us-east-1'
     }
 
     stages {
