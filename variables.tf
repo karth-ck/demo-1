@@ -7,5 +7,5 @@ variable "instance_type" {
 }
 
 variable "ami_id" {
-  default = "ami-0c55b159cbfafe1f0"  # Amazon Linux 2 AMI (update if needed)
+  default = "ami-002f6e91abff6eb96"
 }
